@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Worksheet ss:Name="Services">
+  <Table>
+   <Row>
+    <Cell><Data ss:Type="String">Service Name</Data></Cell>
+    <Cell><Data ss:Type="String">Description</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">Residential Iron Fencing</Data></Cell>
+    <Cell><Data ss:Type="String">Classic or modern designs that secure and enhance any home.</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">Commercial &amp; HOA Ironworks</Data></Cell>
+    <Cell><Data ss:Type="String">Durable, code-compliant fencing and gates for communities, businesses, and facilities.</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">Custom Fabrication &amp; Design</Data></Cell>
+    <Cell><Data ss:Type="String">Architectural railings, decorative panels, and bespoke metal creations.</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">Gates &amp; Automation</Data></Cell>
+    <Cell><Data ss:Type="String">Swing, slide, and smart-controlled gates integrated with keypads, cameras, and remote access.</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">Repairs &amp; Restoration</Data></Cell>
+    <Cell><Data ss:Type="String">Rust removal, rewelding, refinishing, and repainting to revive existing ironwork.</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">Powder Coating &amp; Finishes</Data></Cell>
+    <Cell><Data ss:Type="String">Protective coatings and premium colors for long-term durability and style.</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">Balconies, Railings &amp; Stair Systems</Data></Cell>
+    <Cell><Data ss:Type="String">Safety meets design with interior and exterior iron rail systems.</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">Outdoor Structures &amp; Accents</Data></Cell>
+    <Cell><Data ss:Type="String">Pergolas, trellises, decorative lighting posts, and custom metal furniture.</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>
+</Workbook>
