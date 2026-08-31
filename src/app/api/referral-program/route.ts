@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { saveLead } from '@/lib/lead-storage';
+import { clientIp, verifyTurnstile } from '@/lib/turnstile';
 import {
   escapeHtml,
   FROM_ADDRESS,
@@ -10,7 +11,14 @@ import {
 export async function POST(request: Request) {
   try {
     console.log('📧 Referral Program form API called');
-    const formData = await request.json();
+    const { turnstileToken, ...formData } = await request.json();
+
+    if (!(await verifyTurnstile(turnstileToken, clientIp(request)))) {
+      return NextResponse.json(
+        { success: false, message: 'Captcha verification failed. Please try again.' },
+        { status: 403 }
+      );
+    }
 
     // Email to business owner
     const ownerEmailHtml = `

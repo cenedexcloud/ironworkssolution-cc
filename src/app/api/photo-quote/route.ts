@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { saveLead } from '@/lib/lead-storage';
+import { clientIp, verifyTurnstile } from '@/lib/turnstile';
 import {
   escapeHtml,
   FROM_ADDRESS,
@@ -11,6 +12,13 @@ import {
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
+
+    if (!(await verifyTurnstile(formData.get('turnstileToken'), clientIp(request)))) {
+      return NextResponse.json(
+        { success: false, message: 'Captcha verification failed. Please try again.' },
+        { status: 403 }
+      );
+    }
 
     // Get form fields
     const name = formData.get('name') as string;

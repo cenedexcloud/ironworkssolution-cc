@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Calendar, Clock, User, Mail, Phone } from "lucide-react"
+import { Turnstile, type TurnstileHandle, turnstileEnabled } from "@/components/Turnstile"
 
 interface BookingSchedulerProps {
   isOpen: boolean
@@ -22,6 +23,8 @@ export default function BookingScheduler({ isOpen, onClose }: BookingSchedulerPr
     phone: "",
     projectType: ""
   })
+  const [turnstileToken, setTurnstileToken] = useState("")
+  const turnstileRef = useRef<TurnstileHandle>(null)
 
   // Available time slots
   const timeSlots = [
@@ -51,7 +54,7 @@ export default function BookingScheduler({ isOpen, onClose }: BookingSchedulerPr
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(booking),
+        body: JSON.stringify({ ...booking, turnstileToken }),
       })
 
       const result = await response.json()
@@ -74,6 +77,8 @@ export default function BookingScheduler({ isOpen, onClose }: BookingSchedulerPr
     } catch (error) {
       console.error('Booking submission error:', error)
       alert('Failed to book consultation. Please call us at 323-470-2101.')
+    } finally {
+      turnstileRef.current?.reset()
     }
   }
 
@@ -244,6 +249,8 @@ export default function BookingScheduler({ isOpen, onClose }: BookingSchedulerPr
                 />
               </div>
 
+              <Turnstile ref={turnstileRef} onToken={setTurnstileToken} className="flex justify-center pt-2" />
+
               <div className="flex gap-3 pt-4">
                 <Button
                   type="button"
@@ -253,7 +260,12 @@ export default function BookingScheduler({ isOpen, onClose }: BookingSchedulerPr
                 >
                   Back
                 </Button>
-                <Button type="submit" className="flex-1" size="lg">
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  size="lg"
+                  disabled={turnstileEnabled && !turnstileToken}
+                >
                   Confirm Booking
                 </Button>
               </div>
