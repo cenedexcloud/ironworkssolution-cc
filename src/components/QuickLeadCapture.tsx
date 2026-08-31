@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import { X, Mail, Phone, User, ArrowRight } from "lucide-react"
+import { Turnstile, type TurnstileHandle, turnstileEnabled } from "@/components/Turnstile"
 
 interface QuickLeadCaptureProps {
   isOpen: boolean
@@ -21,6 +22,8 @@ export default function QuickLeadCapture({ isOpen, onClose }: QuickLeadCapturePr
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState("")
+  const turnstileRef = useRef<TurnstileHandle>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,7 +36,7 @@ export default function QuickLeadCapture({ isOpen, onClose }: QuickLeadCapturePr
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, turnstileToken }),
       })
 
       const result = await response.json()
@@ -56,6 +59,7 @@ export default function QuickLeadCapture({ isOpen, onClose }: QuickLeadCapturePr
       console.error('Submit error:', error)
       setSubmitStatus({ type: 'error', message: 'Failed to submit. Please try again.' })
     } finally {
+      turnstileRef.current?.reset()
       setIsSubmitting(false)
     }
   }
@@ -149,9 +153,11 @@ export default function QuickLeadCapture({ isOpen, onClose }: QuickLeadCapturePr
             />
           </div>
 
+          <Turnstile ref={turnstileRef} onToken={setTurnstileToken} className="flex justify-center" />
+
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || (turnstileEnabled && !turnstileToken)}
             className="w-full py-6 text-lg bg-gradient-to-r from-[#C41E3A] to-[#a01829] hover:from-[#a01829] hover:to-[#C41E3A]"
           >
             {isSubmitting ? 'Sending...' : 'Get Free Quote'}

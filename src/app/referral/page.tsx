@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Navigation from "@/components/Navigation";
+import { Turnstile, type TurnstileHandle, turnstileEnabled } from "@/components/Turnstile";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 
 function ReferralProgramContent() {
   const router = useRouter();
@@ -21,6 +22,8 @@ function ReferralProgramContent() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   // Auto-open form if 'join' parameter is in URL (for email blast links)
   useEffect(() => {
@@ -85,7 +88,7 @@ function ReferralProgramContent() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, turnstileToken }),
       });
 
       const result = await response.json();
@@ -103,6 +106,7 @@ function ReferralProgramContent() {
     } catch (error) {
       setSubmitStatus({ type: 'error', message: 'Failed to submit. Please try again.' });
     } finally {
+      turnstileRef.current?.reset();
       setIsSubmitting(false);
     }
   };
@@ -627,6 +631,8 @@ function ReferralProgramContent() {
               </div>
             )}
 
+            <Turnstile ref={turnstileRef} onToken={setTurnstileToken} className="flex justify-center" />
+
             <div className="flex gap-3 pt-4">
               <Button
                 type="button"
@@ -640,7 +646,7 @@ function ReferralProgramContent() {
               <Button
                 type="submit"
                 className="flex-1 bg-[#C41E3A] hover:bg-[#A71930]"
-                disabled={isSubmitting}
+                disabled={isSubmitting || (turnstileEnabled && !turnstileToken)}
               >
                 {isSubmitting ? 'Submitting...' : 'Submit Application'}
               </Button>

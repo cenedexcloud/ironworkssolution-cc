@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Upload, ArrowRight, X, Camera, CheckCircle2 } from "lucide-react"
 import QuoteWizard from "@/components/QuoteWizard"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { Turnstile, type TurnstileHandle, turnstileEnabled } from "@/components/Turnstile"
 
 export default function Hero() {
   const { t } = useLanguage()
@@ -18,6 +19,8 @@ export default function Hero() {
   const [uploadSuccess, setUploadSuccess] = useState(false)
   const [userInfo, setUserInfo] = useState({ name: '', email: '', phone: '' })
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [turnstileToken, setTurnstileToken] = useState("")
+  const turnstileRef = useRef<TurnstileHandle>(null)
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -50,6 +53,8 @@ export default function Hero() {
     formData.append('email', userInfo.email)
     formData.append('phone', userInfo.phone)
 
+    formData.append('turnstileToken', turnstileToken)
+
     // Attach all selected photos as files
     selectedFiles.forEach((file) => {
       formData.append('photos', file)
@@ -78,6 +83,8 @@ export default function Hero() {
     } catch (error) {
       console.error('Photo upload error:', error)
       alert('Failed to submit. Please call us at 323-470-2101.')
+    } finally {
+      turnstileRef.current?.reset()
     }
   }
 
@@ -279,10 +286,13 @@ export default function Hero() {
                 </p>
               </div>
 
+              <Turnstile ref={turnstileRef} onToken={setTurnstileToken} className="flex justify-center" />
+
               <Button
                 type="submit"
                 size="lg"
                 className="w-full"
+                disabled={turnstileEnabled && !turnstileToken}
               >
                 {selectedFiles.length > 0 ? 'Submit Photos & Get Quote' : 'Request Quote'}
               </Button>

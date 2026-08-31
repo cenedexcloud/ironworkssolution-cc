@@ -306,10 +306,10 @@ export default function TestForms() {
         <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded">
           <h4 className="font-bold text-yellow-800 mb-2">Note about Email Delivery:</h4>
           <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
-            <li>Emails will be sent from: onboarding@resend.dev</li>
+            <li>Emails are sent through the mini-mailer service (MAILER_URL)</li>
             <li>Check your spam folder if emails don't arrive</li>
-            <li>Customer auto-replies are currently disabled (using dev email)</li>
-            <li>To enable customer auto-replies, verify a domain at resend.com</li>
+            <li>If MAILER_URL / MAILER_API_KEY are unset, forms still succeed but no email is sent</li>
+            <li>Set FROM_EMAIL to override the sender address</li>
           </ul>
         </div>
       </div>

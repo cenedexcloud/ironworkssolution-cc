@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card } from "@/components/ui/card"
 import { MapPin, Phone, Mail, Clock, Upload } from "lucide-react"
+import { Turnstile, type TurnstileHandle, turnstileEnabled } from "@/components/Turnstile"
 
 const contactInfo = [
   {
@@ -47,6 +48,8 @@ export default function Contact() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState("")
+  const turnstileRef = useRef<TurnstileHandle>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,7 +62,7 @@ export default function Contact() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, turnstileToken }),
       })
 
       const result = await response.json()
@@ -81,6 +84,7 @@ export default function Contact() {
       console.error('Submit error:', error)
       setSubmitStatus({ type: 'error', message: 'Failed to submit. Please call us at 323-470-2101.' })
     } finally {
+      turnstileRef.current?.reset()
       setIsSubmitting(false)
     }
   }
@@ -218,7 +222,14 @@ export default function Contact() {
                 </div>
               </div>
 
-              <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+              <Turnstile ref={turnstileRef} onToken={setTurnstileToken} />
+
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                disabled={isSubmitting || (turnstileEnabled && !turnstileToken)}
+              >
                 {isSubmitting ? 'Submitting...' : 'Submit My Request'}
               </Button>
 

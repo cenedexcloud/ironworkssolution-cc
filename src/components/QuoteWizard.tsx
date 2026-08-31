@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { X, ChevronRight, ChevronLeft, Upload } from "lucide-react"
+import { Turnstile, type TurnstileHandle, turnstileEnabled } from "@/components/Turnstile"
 
 interface QuoteWizardProps {
   isOpen: boolean
@@ -23,6 +24,8 @@ export default function QuoteWizard({ isOpen, onClose }: QuoteWizardProps) {
     phone: ""
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState("")
+  const turnstileRef = useRef<TurnstileHandle>(null)
 
   if (!isOpen) return null
 
@@ -38,7 +41,7 @@ export default function QuoteWizard({ isOpen, onClose }: QuoteWizardProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, turnstileToken }),
       })
 
       const result = await response.json()
@@ -62,6 +65,7 @@ export default function QuoteWizard({ isOpen, onClose }: QuoteWizardProps) {
       console.error('Quote submission error:', error)
       alert('Failed to submit. Please call us at 323-470-2101.')
     } finally {
+      turnstileRef.current?.reset()
       setIsSubmitting(false)
     }
   }
@@ -219,6 +223,8 @@ export default function QuoteWizard({ isOpen, onClose }: QuoteWizardProps) {
                   />
                 </div>
 
+                <Turnstile ref={turnstileRef} onToken={setTurnstileToken} className="flex justify-center" />
+
                 <div className="mt-6 p-6 bg-gradient-to-r from-[#1a1a1a] to-[#3c3c3c] rounded-lg text-white">
                   <h4 className="font-bold mb-2">Estimated Quote Range:</h4>
                   <p className="text-3xl font-bold text-[#C41E3A]">$3,500 - $6,500</p>
@@ -249,7 +255,13 @@ export default function QuoteWizard({ isOpen, onClose }: QuoteWizardProps) {
               className="ml-auto w-full"
               size="lg"
               onClick={handleSubmit}
-              disabled={isSubmitting || !formData.name || !formData.email || !formData.phone}
+              disabled={
+                isSubmitting ||
+                !formData.name ||
+                !formData.email ||
+                !formData.phone ||
+                (turnstileEnabled && !turnstileToken)
+              }
             >
               {isSubmitting ? 'Submitting...' : 'Get My Free Quote'}
             </Button>
