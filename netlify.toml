@@ -5,5 +5,12 @@
   command = "bun run build"
   publish = ".next"
 
+  [build.environment]
+    # The Turnstile site key is public by design — it is inlined into the
+    # client bundle and rendered in the page for the browser. Netlify's secret
+    # scanner flags it anyway, so omit that one key rather than disabling the
+    # scan for everything else.
+    SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_TURNSTILE_SITE_KEY"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
