@@ -30,7 +30,7 @@ export type SendMailInput = {
 const DEFAULT_FROM_NAME = 'Iron Works Solution';
 
 /** Everyone who receives lead notifications from the site forms. */
-export const LEAD_RECIPIENTS = ['ray@wyesman.com'];
+export const LEAD_RECIPIENTS = ['ray@wyesman.com', 'bestmetal8@gmail.com'];
 
 /** Optional sender-address override, configured per environment. */
 export const FROM_ADDRESS = process.env.FROM_EMAIL || undefined;
