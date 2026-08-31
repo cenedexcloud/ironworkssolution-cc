@@ -1,18 +1,15 @@
 import { NextResponse } from 'next/server';
-import { Resend } from 'resend';
 import { saveLead } from '@/lib/lead-storage';
+import {
+  escapeHtml,
+  FROM_ADDRESS,
+  isMailerConfigured,
+  sendLeadNotification,
+  sendMail,
+} from '@/lib/mailer';
 
 export async function POST(request: Request) {
   try {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { success: false, message: 'Server configuration error. Please contact support.' },
-        { status: 500 }
-      );
-    }
-    const resend = new Resend(apiKey);
-
     const formData = await request.formData();
 
     // Get form fields
@@ -21,43 +18,34 @@ export async function POST(request: Request) {
     const phone = formData.get('phone') as string;
 
     // Get all uploaded files
-    const files = formData.getAll('photos');
+    const files = formData.getAll('photos').filter((f) => f instanceof File) as File[];
 
-    const attachments = [];
-
-    // Convert files to base64 attachments for Resend
-    for (const file of files) {
-      if (file instanceof File) {
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-
-        attachments.push({
-          filename: file.name,
-          content: buffer,
-        });
-      }
-    }
+    // TODO: the mailer service carries no attachments — upload the photos to the
+    // storage bucket and link them here instead. Until then the notification
+    // reports the count only and the owner contacts the customer for the images.
+    const photoNames = files.map((f) => f.name);
 
     // Email to business owner
     const ownerEmailHtml = `
       <h2>New Photo Quote Request</h2>
 
       <h3>Contact Information</h3>
-      <p><strong>Name:</strong> ${name}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Phone:</strong> ${phone}</p>
+      <p><strong>Name:</strong> ${escapeHtml(name)}</p>
+      <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+      <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
 
       <h3>Project Photos</h3>
-      <p>${files.length > 0 ? `Customer has uploaded ${files.length} photo(s) for quote estimation.` : 'No photos provided.'}</p>
+      <p>${files.length > 0 ? `Customer uploaded ${files.length} photo(s) for quote estimation.` : 'No photos provided.'}</p>
+      ${photoNames.length > 0 ? `<ul>${photoNames.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
 
-      ${attachments.length > 0 ? '<p>Please review the attached photos and provide a quote.</p>' : '<p>Please contact the customer to discuss their project and provide a quote.</p>'}
+      <p>Please contact the customer to discuss their project and provide a quote.</p>
     `;
 
     // Auto-reply email to customer
     const customerEmailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #C41E3A;">Thank You for Your Photo Quote Request</h2>
-        <p>Hey ${name},</p>
+        <p>Hey ${escapeHtml(name)},</p>
         <p>We got your inquiry. We will be in touch with you within 24 hours with a quote based on the photos you submitted.</p>
         <p>We received ${files.length} photo(s) and our team is reviewing them to provide you with an accurate estimate.</p>
         <p>We appreciate your interest in our services!</p>
@@ -65,50 +53,63 @@ export async function POST(request: Request) {
       </div>
     `;
 
-    const ownerEmailOptions = {
-      from: 'Iron Works Solution <onboarding@resend.dev>',
-      to: ['ray@tradeblaze.net'],
-      replyTo: email,
-      subject: '🔥 NEW HOT LEADS - Photo Quote Request - Iron Works Solution',
-      html: ownerEmailHtml,
-      ...(attachments.length > 0 && { attachments }),
-    };
+    const lead = { name, email, phone, photoCount: files.length };
 
-    // Update email recipient to ray@wyesman.com
-    ownerEmailOptions.to = ['ray@wyesman.com'];
+    if (!isMailerConfigured()) {
+      // Accept the lead rather than failing the visitor, but be explicit in logs.
+      console.error('[photo-quote] MAILER_URL / MAILER_API_KEY are not set — no email sent');
+      saveLead({ type: 'photo-quote', data: lead, emailSent: false });
+      return NextResponse.json({
+        success: true,
+        message: 'Photos submitted successfully!',
+        warning: 'Email notifications are not configured on this environment.',
+      });
+    }
 
-    // Send notification to business owner
-    const { data: ownerData, error: ownerError } = await resend.emails.send(ownerEmailOptions);
-
-    if (ownerError) {
-      console.error('Resend error (owner email):', ownerError);
+    let messageId: string | undefined;
+    let emailSent = true;
+    try {
+      messageId = await sendLeadNotification('photo-quote', {
+        subject: '🔥 NEW HOT LEADS - Photo Quote Request - Iron Works Solution',
+        html: ownerEmailHtml,
+        replyTo: email,
+        from: FROM_ADDRESS,
+      });
+    } catch {
+      emailSent = false;
     }
 
     // Save lead to storage
     saveLead({
       type: 'photo-quote',
-      data: { name, email, phone, photoCount: files.length },
-      emailSent: !ownerError,
+      data: lead,
+      emailSent,
     });
 
-    // Customer auto-reply (skip if using dev email to avoid errors)
-    if (process.env.FROM_EMAIL && !process.env.FROM_EMAIL.includes('resend.dev')) {
-      const { data: customerData, error: customerError } = await resend.emails.send({
-        from: `Iron Works Solution <${process.env.FROM_EMAIL}>`,
-        to: [email],
-        subject: 'Photo Quote Request Received - Iron Works Solution',
-        html: customerEmailHtml,
-      });
+    if (!emailSent) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to submit photos. Please try again.' },
+        { status: 502 }
+      );
+    }
 
-      if (customerError) {
-        console.error('Resend error (customer auto-reply):', customerError);
+    // Customer auto-reply. A failure here must not fail the request — the
+    // notification to the office already went out.
+    if (email) {
+      try {
+        await sendMail({
+          to: email,
+          subject: 'Photo Quote Request Received - Iron Works Solution',
+          html: customerEmailHtml,
+          from: FROM_ADDRESS,
+        });
+      } catch (err) {
+        console.error('[photo-quote] auto-reply failed:', (err as Error).message);
       }
-    } else {
-      console.log('⚠️ Customer auto-reply skipped (using dev email)');
     }
 
     return NextResponse.json(
-      { success: true, message: 'Photos submitted successfully!' },
+      { success: true, message: 'Photos submitted successfully!', messageId },
       { status: 200 }
     );
   } catch (error) {
